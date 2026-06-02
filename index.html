@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0d1117;font-family:Arial,sans-serif;overflow:hidden;touch-action:none;user-select:none;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh}
+#hud{width:456px;display:flex;justify-content:space-between;align-items:center;padding:6px 12px;color:#fff;font-size:13px;font-weight:bold;background:rgba(255,255,255,0.05);border-radius:8px;margin-bottom:6px}
+#mode-banner{width:456px;text-align:center;font-size:13px;font-weight:bold;padding:4px 0;border-radius:6px;margin-bottom:4px;transition:background 0.3s}
+#wrap{position:relative;width:456px;height:504px}
+canvas{display:block;border-radius:10px;border:2px solid #2a5a8c}
+#overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(5,10,25,0.93);border-radius:10px;padding:20px;text-align:center;z-index:20}
+h1{color:#FFD700;font-size:26px;margin-bottom:8px}
+.sub{color:#aaa;font-size:13px;margin-bottom:14px;line-height:1.6}
+.btn{background:#27ae60;color:#fff;border:none;border-radius:8px;padding:12px 36px;font-size:15px;font-weight:bold;cursor:pointer;margin:5px}
+.btn:hover{background:#2ecc71}
+.btn.blue{background:#2980b9}.btn.blue:hover{background:#3498db}
+.fg{width:100%;max-width:300px;margin:6px 0;text-align:left}
+.fg label{display:block;color:#bbb;font-size:12px;margin-bottom:3px}
+.fg input{width:100%;padding:9px 10px;border-radius:6px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.08);color:#fff;font-size:13px;outline:none}
+.fg input:focus{border-color:#27ae60}
+#hint{color:rgba(255,255,255,0.3);font-size:11px;margin-top:5px}
+</style>
+</head>
+<body>
+<div id="hud">
+  <span>🏆 <span id="sc">0</span></span>
+  <span style="color:#FFD700;letter-spacing:1px">RE-CIG RACCOON</span>
+  <span id="lv">🦝🦝🦝</span>
+</div>
+<div id="mode-banner" id="mb">⚠️ Modalità PERICOLO — scappa dalle sigarette!</div>
+<div id="wrap">
+  <canvas id="c" width="456" height="504"></canvas>
+  <div id="overlay">
+    <h1>🦝 RE-CIG RACCOON</h1>
+    <p class="sub">Raccogli le cicche verdi 🟢<br>Le sigarette cambiano modalità ogni 5 secondi:<br>🔴 <strong>ROSSE</strong> → scappa! &nbsp; 🔵 <strong>BLU</strong> → mangia!</p>
+    <button class="btn" id="startBtn">▶ INIZIA A GIOCARE</button>
+  </div>
+</div>
+<div id="hint">⬆⬇⬅➡ tastiera &nbsp;|&nbsp; swipe su mobile</div>
+
+<script>
+const canvas=document.getElementById('c'),ctx=canvas.getContext('2d');
+const overlay=document.getElementById('overlay'),scEl=document.getElementById('sc'),lvEl=document.getElementById('lv');
+const banner=document.getElementById('mode-banner');
+const T=24,COLS=19,ROWS=21;
+
+const RAW=[
+  "XXXXXXXXXXXXXXXXXXX",
+  "X........X........X",
+  "X.XX.XXX.X.XXX.XX.X",
+  "XoXX.XXX.X.XXX.XXoX",
+  "X.XX.XXX.X.XXX.XX.X",
+  "X.................X",
+  "X.XX.X.XXXXX.X.XX.X",
+  "X....X..XXX..X....X",
+  "XXXX.XXXXXXXXX.XXXX",
+  "XXXX.X       X.XXXX",
+  "XXXX.X XXXXX X.XXXX",
+  "XXXX.         .XXXX",
+  "XXXX.X XXXXX X.XXXX",
+  "XXXX.XXXXXXXXX.XXXX",
+  "X........X........X",
+  "X.XX.XXX.X.XXX.XX.X",
+  "Xo.......P.......oX",
+  "XXX.X.XXXXX.X.X.XXX",
+  "X....X.......X....X",
+  "X.XXXXXXX.XXXXXXX.X",
+  "X.................X",
+];
+
+// Posizioni di spawn per i fantasmi — distribuiti per tutto il labirinto
+const GHOST_SPAWNS=[
+  {x:1,y:1},{x:17,y:1},{x:1,y:19},{x:17,y:19}
+];
+
+let map=[],dots=[],powerDots=[],score=0,lives=3;
+let player={},ghosts=[],tick=0,state='idle',raf=null;
+// Modalità: 'danger' = devo scappare, 'eat' = posso mangiare
+let modeTimer=0,MODE_DURATION=300,currentMode='danger',modeFlash=0;
+
+function build(){
+  map=[];dots=[];powerDots=[];
+  let ps={x:9,y:16};
+  for(let r=0;r<ROWS;r++){
+    map[r]=[];
+    const row=RAW[r]||'';
+    for(let c=0;c<COLS;c++){
+      const ch=row[c]||' ';
+      map[r][c]=(ch==='X')?1:0;
+      if(ch==='P') ps={x:c,y:r};
+      if(ch==='.') dots.push({x:c,y:r,eaten:false});
+      if(ch==='o'){dots.push({x:c,y:r,eaten:false});powerDots.push({x:c,y:r});}
+    }
+  }
+  player={x:ps.x,y:ps.y,px:ps.x,py:ps.y,dx:0,dy:0,ndx:0,ndy:0,mt:0,spd:14};
+
+  const gc=['#FF6B9D','#FFB347','#87CEEB','#98FB98'];
+  ghosts=GHOST_SPAWNS.map((s,i)=>({
+    x:s.x,y:s.y,px:s.x,py:s.y,dx:0,dy:0,
+    color:gc[i],dead:false,mt:0,spd:18,
+    dirTimer:0,dirInterval:40+i*10
+  }));
+
+  currentMode='danger';modeTimer=MODE_DURATION;
+  updateBanner();
+}
+
+function wall(c,r){
+  if(r<0||r>=ROWS||c<0||c>=COLS) return true;
+  return map[r]&&map[r][c]===1;
+}
+
+function stepPlayer(){
+  player.mt++;
+  if(player.mt<player.spd) return;
+  player.mt=0;
+  if(player.ndx!==0||player.ndy!==0){
+    const nx=player.x+player.ndx,ny=player.y+player.ndy;
+    if(!wall(nx,ny)){player.dx=player.ndx;player.dy=player.ndy;}
+  }
+  if(player.dx===0&&player.dy===0) return;
+  const mx=(player.x+player.dx+COLS)%COLS,my=(player.y+player.dy+ROWS)%ROWS;
+  if(!wall(mx,my)){player.px=player.x;player.py=player.y;player.x=mx;player.y=my;}
+  dots.forEach(d=>{
+    if(!d.eaten&&d.x===player.x&&d.y===player.y){
+      d.eaten=true;score+=10;
+    }
+  });
+}
+
+function getOpenDirs(g){
+  return [{dx:1,dy:0},{dx:-1,dy:0},{dx:0,dy:1},{dx:0,dy:-1}]
+    .filter(d=>!(d.dx===-g.dx&&d.dy===-g.dy)&&!wall(g.x+d.dx,g.y+d.dy));
+}
+
+function stepGhost(g){
+  if(g.dead) return;
+  g.mt++;
+  if(g.mt<g.spd) return;
+  g.mt=0;
+
+  g.dirTimer++;
+  // Cambio direzione: in modalità pericolo inseguono, in eat fuggono o random
+  if(g.dirTimer>=g.dirInterval){
+    g.dirTimer=0;
+    const dirs=getOpenDirs(g);
+    if(dirs.length===0) return;
+    let chosen;
+    if(currentMode==='danger'){
+      // insegue il giocatore
+      chosen=dirs.reduce((best,d)=>{
+        const dist=Math.hypot((g.x+d.dx)-player.x,(g.y+d.dy)-player.y);
+        return dist<best.dist?{d,dist}:best;
+      },{d:dirs[0],dist:Infinity}).d;
+    } else {
+      // fugge dal giocatore
+      chosen=dirs.reduce((best,d)=>{
+        const dist=Math.hypot((g.x+d.dx)-player.x,(g.y+d.dy)-player.y);
+        return dist>best.dist?{d,dist}:best;
+      },{d:dirs[0],dist:-1}).d;
+    }
+    g.dx=chosen.dx;g.dy=chosen.dy;
+  }
+
+  if(g.dx===0&&g.dy===0){
+    const dirs=getOpenDirs(g);
+    if(dirs.length>0){const d=dirs[Math.floor(Math.random()*dirs.length)];g.dx=d.dx;g.dy=d.dy;}
+    return;
+  }
+  const nx=g.x+g.dx,ny=g.y+g.dy;
+  if(!wall(nx,ny)){g.px=g.x;g.py=g.y;g.x=nx;g.y=ny;}
+  else{
+    const dirs=getOpenDirs(g);
+    if(dirs.length>0){const d=dirs[Math.floor(Math.random()*dirs.length)];g.dx=d.dx;g.dy=d.dy;}
+  }
+}
+
+function checkHits(){
+  ghosts.forEach(g=>{
+    if(g.dead) return;
+    if(Math.abs(g.x-player.x)<1&&Math.abs(g.y-player.y)<1){
+      if(currentMode==='eat'){
+        g.dead=true;score+=200;
+        setTimeout(()=>{g.dead=false;const s=GHOST_SPAWNS[ghosts.indexOf(g)];g.x=s.x;g.y=s.y;g.px=s.x;g.py=s.y;g.dx=0;g.dy=0;},4000);
+      } else {
+        lives--;updateLv();
+        if(lives<=0) endGame();
+        else resetPos();
+      }
+    }
+  });
+}
+
+function resetPos(){
+  player.x=9;player.y=16;player.px=9;player.py=16;player.dx=0;player.dy=0;player.ndx=0;player.ndy=0;
+}
+
+function updateLv(){lvEl.textContent='🦝'.repeat(Math.max(0,lives));}
+
+function updateBanner(){
+  if(currentMode==='danger'){
+    banner.style.background='rgba(180,30,30,0.7)';
+    banner.style.color='#ffcccc';
+    banner.textContent='🔴 PERICOLO — scappa dalle sigarette!';
+  } else {
+    banner.style.background='rgba(30,80,200,0.7)';
+    banner.style.color='#cce0ff';
+    banner.textContent='🔵 MANGIA — le sigarette sono vulnerabili!';
+  }
+}
+
+function stepMode(){
+  modeTimer--;
+  modeFlash=modeTimer<60?Math.floor(tick/8)%2:0;
+  if(modeTimer<=0){
+    currentMode=currentMode==='danger'?'eat':'danger';
+    modeTimer=MODE_DURATION;
+    updateBanner();
+  }
+}
+
+function lerp(a,b,t){return a+(b-a)*t;}
+
+function drawRaccoon(cx,cy,dx,dy,t){
+  const ang=(dx===0&&dy===0)?0:Math.atan2(dy,dx);
+  const mo=Math.abs(Math.sin(t*0.2))*0.45;
+  ctx.save();ctx.translate(cx,cy);ctx.rotate(ang);
+  ctx.beginPath();ctx.arc(0,0,9,mo,Math.PI*2-mo);ctx.lineTo(0,0);
+  ctx.fillStyle='#8B7355';ctx.fill();
+  ctx.fillStyle='#6B5335';
+  ctx.beginPath();ctx.arc(-2,-5,3,0,Math.PI*2);ctx.fill();
+  ctx.beginPath();ctx.arc(6,-5,3,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#C4A882';
+  ctx.beginPath();ctx.arc(0,0,5,Math.PI,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#222';
+  ctx.beginPath();ctx.arc(-3,-1,1.5,0,Math.PI*2);ctx.fill();
+  ctx.beginPath();ctx.arc(3,-1,1.5,0,Math.PI*2);ctx.fill();
+  ctx.strokeStyle='#555';ctx.lineWidth=1;
+  ctx.beginPath();
+  ctx.moveTo(-4,2);ctx.lineTo(-8,0);ctx.moveTo(-4,2);ctx.lineTo(-8,4);
+  ctx.moveTo(4,2);ctx.lineTo(8,0);ctx.moveTo(4,2);ctx.lineTo(8,4);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawGhost(cx,cy,col,isEat,flash,dead,t){
+  if(dead) return;
+  ctx.save();ctx.translate(cx,cy);
+  const bodyCol=isEat?(flash?'#ffffff':'#4488ff'):col;
+  // corpo sigaretta
+  ctx.fillStyle='#f0f0f0';ctx.fillRect(-5,-11,10,18);
+  ctx.fillStyle='#F5DEB3';ctx.fillRect(-5,-11,10,9);
+  ctx.fillStyle=isEat?'#4488ff':'#FF8C00';ctx.fillRect(-5,-15,10,6);
+  if(!isEat){
+    ctx.fillStyle='#ff3300';
+    ctx.beginPath();ctx.arc(0,-17,3,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='rgba(200,200,200,0.4)';
+    ctx.beginPath();ctx.arc(-2,-20,2,0,Math.PI*2);ctx.fill();
+  }
+  // gambe fantasma
+  ctx.fillStyle=bodyCol;
+  for(let i=0;i<4;i++){ctx.beginPath();ctx.arc(-5+i*3.5,8,2.2,0,Math.PI*2);ctx.fill();}
+  // occhi
+  ctx.fillStyle=isEat?'#88aaff':'#111';
+  ctx.beginPath();ctx.arc(-2,1,1.8,0,Math.PI*2);ctx.fill();
+  ctx.beginPath();ctx.arc(3,1,1.8,0,Math.PI*2);ctx.fill();
+  if(isEat){
+    ctx.strokeStyle='#88aaff';ctx.lineWidth=1.2;
+    ctx.beginPath();ctx.moveTo(-4,5);ctx.lineTo(-2,3);ctx.lineTo(0,5);ctx.lineTo(2,3);ctx.lineTo(4,5);ctx.stroke();
+  } else {
+    ctx.strokeStyle='#333';ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(-3,4);ctx.quadraticCurveTo(0,6,3,4);ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function render(){
+  ctx.fillStyle='#0d1117';ctx.fillRect(0,0,canvas.width,canvas.height);
+  for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++){
+    if(map[r][c]===1){
+      ctx.fillStyle='#162a40';ctx.fillRect(c*T,r*T,T,T);
+      ctx.strokeStyle='#1e4060';ctx.lineWidth=0.5;ctx.strokeRect(c*T+0.5,r*T+0.5,T-1,T-1);
+    }
+  }
+  const isPow=(x,y)=>powerDots.some(p=>p.x===x&&p.y===y);
+  dots.forEach(d=>{
+    if(d.eaten) return;
+    const cx=d.x*T+T/2,cy=d.y*T+T/2;
+    if(isPow(d.x,d.y)){
+      ctx.fillStyle=`rgba(255,215,0,${0.6+0.4*Math.sin(tick*0.15)})`;
+      ctx.beginPath();ctx.arc(cx,cy,5,0,Math.PI*2);ctx.fill();
+    } else {
+      ctx.fillStyle='rgba(120,220,120,0.85)';
+      ctx.beginPath();ctx.arc(cx,cy,2.5,0,Math.PI*2);ctx.fill();
+    }
+  });
+  const prog=(mt,spd)=>Math.min(1,mt/Math.max(spd,1));
+  const isEat=currentMode==='eat';
+  ghosts.forEach(g=>{
+    const p=prog(g.mt,g.spd);
+    const cx=lerp(g.px,g.x,p)*T+T/2,cy=lerp(g.py,g.y,p)*T+T/2;
+    drawGhost(cx,cy,g.color,isEat,modeFlash===1,g.dead,tick);
+  });
+  const pp=prog(player.mt,player.spd);
+  const pcx=lerp(player.px,player.x,pp)*T+T/2,pcy=lerp(player.py,player.y,pp)*T+T/2;
+  drawRaccoon(pcx,pcy,player.dx,player.dy,tick);
+  scEl.textContent=score;
+}
+
+function loop(){
+  if(state!=='playing') return;
+  tick++;
+  stepMode();
+  stepPlayer();
+  ghosts.forEach(stepGhost);
+  checkHits();
+  if(dots.filter(d=>!d.eaten).length===0){showEnd(true);return;}
+  render();
+  raf=requestAnimationFrame(loop);
+}
+
+function startGame(){
+  cancelAnimationFrame(raf);
+  score=0;lives=3;tick=0;
+  build();updateLv();
+  state='playing';
+  overlay.style.display='none';
+  loop();
+}
+function endGame(){state='over';cancelAnimationFrame(raf);showEnd(false);}
+
+function showEnd(win){
+  state='end';
+  overlay.style.display='flex';
+  overlay.innerHTML=`
+    <h1>${win?'🎉 BRAVO!':'💨 Game Over'}</h1>
+    <p class="sub">${win?'Hai raccolto tutte le cicche!':'Troppi mozziconi!'}<br>Punteggio: <strong style="color:#FFD700">${score}</strong></p>
+    <p class="sub" style="margin-bottom:10px">Lascia i dati e ritira il premio allo stand!</p>
+    <div class="fg"><label>Nome e Cognome *</label><input id="fn" type="text" placeholder="Mario Rossi"></div>
+    <div class="fg"><label>Email *</label><input id="fe" type="email" placeholder="mario@email.com"></div>
+    <div class="fg"><label>Telefono</label><input id="fp" type="tel" placeholder="+39 000 0000000"></div>
+    <div style="margin-top:12px">
+      <button class="btn" id="subBtn">🎁 RITIRA IL PREMIO</button>
+      <button class="btn blue" id="reBtn">🔄 Riprova</button>
+    </div>`;
+  document.getElementById('subBtn').addEventListener('click',submitForm);
+  document.getElementById('reBtn').addEventListener('click',startGame);
+}
+
+function submitForm(){
+  const name=document.getElementById('fn').value.trim();
+  const email=document.getElementById('fe').value.trim();
+  if(!name||!email){alert('Inserisci nome e email!');return;}
+  overlay.innerHTML=`
+    <h1>🦝 Perfetto, ${name.split(' ')[0]}!</h1>
+    <p class="sub">Dati registrati!<br>Mostra questo schermo allo staff Re-Cig.</p>
+    <div style="background:rgba(255,215,0,0.12);border:2px solid #FFD700;border-radius:12px;padding:16px;margin:12px 0;width:100%;max-width:280px">
+      <p style="color:#FFD700;font-size:18px;font-weight:bold">🎁 PREMIO RISERVATO</p>
+      <p style="color:#fff;font-size:14px;margin-top:6px"><strong>${name}</strong></p>
+      <p style="color:#aaa;font-size:12px">${score} punti · Ecomondo Rimini</p>
+    </div>
+    <p style="color:#88ee88;font-size:12px;margin-bottom:14px">♻️ Ogni cicca raccolta è un passo verso un ambiente più pulito!</p>
+    <button class="btn blue" id="reBtn2">🔄 Gioca ancora</button>`;
+  document.getElementById('reBtn2').addEventListener('click',startGame);
+}
+
+document.addEventListener('keydown',e=>{
+  const m={ArrowUp:{dx:0,dy:-1},ArrowDown:{dx:0,dy:1},ArrowLeft:{dx:-1,dy:0},ArrowRight:{dx:1,dy:0}};
+  if(m[e.key]){player.ndx=m[e.key].dx;player.ndy=m[e.key].dy;e.preventDefault();}
+});
+let tx=0,ty=0;
+canvas.addEventListener('touchstart',e=>{tx=e.touches[0].clientX;ty=e.touches[0].clientY;e.preventDefault();},{passive:false});
+canvas.addEventListener('touchend',e=>{
+  const dx=e.changedTouches[0].clientX-tx,dy=e.changedTouches[0].clientY-ty;
+  if(Math.abs(dx)>Math.abs(dy)){player.ndx=dx>0?1:-1;player.ndy=0;}
+  else{player.ndy=dy>0?1:-1;player.ndx=0;}
+  e.preventDefault();
+},{passive:false});
+
+document.getElementById('startBtn').addEventListener('click',startGame);
+</script>
+</body>
+</html>
