@@ -2,384 +2,492 @@
 <html lang="it">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Re-Cig Raccoon</title>
 <style>
-*{margin:0;padding:0;box-sizing:border-box}
-body{background:#0d1117;font-family:Arial,sans-serif;overflow:hidden;touch-action:none;user-select:none;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh}
-#hud{width:456px;display:flex;justify-content:space-between;align-items:center;padding:6px 12px;color:#fff;font-size:13px;font-weight:bold;background:rgba(255,255,255,0.05);border-radius:8px;margin-bottom:6px}
-#mode-banner{width:456px;text-align:center;font-size:13px;font-weight:bold;padding:4px 0;border-radius:6px;margin-bottom:4px;transition:background 0.3s}
-#wrap{position:relative;width:456px;height:504px}
-canvas{display:block;border-radius:10px;border:2px solid #2a5a8c}
-#overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(5,10,25,0.93);border-radius:10px;padding:20px;text-align:center;z-index:20}
-h1{color:#FFD700;font-size:26px;margin-bottom:8px}
-.sub{color:#aaa;font-size:13px;margin-bottom:14px;line-height:1.6}
-.btn{background:#27ae60;color:#fff;border:none;border-radius:8px;padding:12px 36px;font-size:15px;font-weight:bold;cursor:pointer;margin:5px}
-.btn:hover{background:#2ecc71}
-.btn.blue{background:#2980b9}.btn.blue:hover{background:#3498db}
-.fg{width:100%;max-width:300px;margin:6px 0;text-align:left}
-.fg label{display:block;color:#bbb;font-size:12px;margin-bottom:3px}
-.fg input{width:100%;padding:9px 10px;border-radius:6px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.08);color:#fff;font-size:13px;outline:none}
-.fg input:focus{border-color:#27ae60}
-#hint{color:rgba(255,255,255,0.3);font-size:11px;margin-top:5px}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{width:100%;height:100%;overflow:hidden;background:#0d1117;font-family:Arial,sans-serif;touch-action:none}
+#root{display:flex;flex-direction:column;align-items:center;width:100%;height:100%;padding:4px}
+#hud{width:100%;display:flex;justify-content:space-between;align-items:center;padding:4px 10px;color:#fff;font-size:12px;font-weight:bold;background:rgba(255,255,255,0.07);border-radius:6px;margin-bottom:3px;flex-shrink:0}
+#banner{width:100%;text-align:center;font-size:12px;font-weight:bold;padding:3px 0;border-radius:5px;margin-bottom:3px;flex-shrink:0;color:#aaa;background:rgba(40,40,40,0.85)}
+#wrap{position:relative;width:100%;flex:1;min-height:0;display:flex;align-items:center;justify-content:center}
+canvas{display:block;border-radius:8px;border:2px solid #2a5a8c;touch-action:none}
+#overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(5,10,25,0.95);border-radius:8px;padding:16px;text-align:center;z-index:20;overflow-y:auto}
+h1{color:#FFD700;font-size:22px;margin-bottom:6px}
+.sub{color:#aaa;font-size:12px;margin-bottom:10px;line-height:1.6}
+.btn{background:#27ae60;color:#fff;border:none;border-radius:8px;padding:12px 28px;font-size:14px;font-weight:bold;cursor:pointer;margin:4px;-webkit-appearance:none}
+.btn.blue{background:#2980b9}
+.fg{width:100%;max-width:280px;margin:4px 0;text-align:left}
+.fg label{display:block;color:#bbb;font-size:11px;margin-bottom:2px}
+.fg input{width:100%;padding:8px 10px;border-radius:6px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.08);color:#fff;font-size:13px;outline:none;-webkit-appearance:none}
+#dpad{width:100%;display:flex;justify-content:center;padding:4px 0;flex-shrink:0}
+.dp-grid{display:grid;grid-template-columns:54px 54px 54px;grid-template-rows:54px 54px;gap:5px}
+.dp-btn{background:rgba(255,255,255,0.13);color:#fff;border:1px solid rgba(255,255,255,0.25);border-radius:10px;font-size:22px;display:flex;align-items:center;justify-content:center;cursor:pointer;-webkit-appearance:none;width:54px;height:54px}
+.dp-btn:active{background:rgba(255,255,255,0.3)}
 </style>
 </head>
 <body>
-<div id="hud">
-  <span>🏆 <span id="sc">0</span></span>
-  <span style="color:#FFD700;letter-spacing:1px">RE-CIG RACCOON</span>
-  <span id="lv">🦝🦝🦝</span>
-</div>
-<div id="mode-banner" id="mb">⚠️ Modalità PERICOLO — scappa dalle sigarette!</div>
-<div id="wrap">
-  <canvas id="c" width="456" height="504"></canvas>
-  <div id="overlay">
-    <h1>🦝 RE-CIG RACCOON</h1>
-    <p class="sub">Raccogli le cicche verdi 🟢<br>Le sigarette cambiano modalità ogni 5 secondi:<br>🔴 <strong>ROSSE</strong> → scappa! &nbsp; 🔵 <strong>BLU</strong> → mangia!</p>
-    <button class="btn" id="startBtn">▶ INIZIA A GIOCARE</button>
+<div id="root">
+  <div id="hud">
+    <span>🏆 <span id="sc">0</span></span>
+    <span style="color:#FFD700;font-size:11px;letter-spacing:1px">RE-CIG RACCOON</span>
+    <span id="lv">🦝🦝🦝</span>
+  </div>
+  <div id="banner">🟢 Raccogli cicche · 🌟 Power-up per mangiare i fantasmi</div>
+  <div id="wrap">
+    <canvas id="c"></canvas>
+    <div id="overlay">
+      <h1>🦝 RE-CIG RACCOON</h1>
+      <p class="sub">
+        🟢 Raccogli le cicche verdi<br>
+        🌟 Prendi il <b>power-up</b> per mangiare i fantasmi!<br>
+        🚬 Evita le sigarette... finché puoi!<br>
+        ➡️ Tunnel laterale per attraversare lo schermo
+      </p>
+      <button class="btn" id="startBtn">▶ INIZIA A GIOCARE</button>
+    </div>
+  </div>
+  <div id="dpad">
+    <div class="dp-grid">
+      <div></div>
+      <button class="dp-btn" id="dU">▲</button>
+      <div></div>
+      <button class="dp-btn" id="dL">◀</button>
+      <button class="dp-btn" id="dD">▼</button>
+      <button class="dp-btn" id="dR">▶</button>
+    </div>
   </div>
 </div>
-<div id="hint">⬆⬇⬅➡ tastiera &nbsp;|&nbsp; swipe su mobile</div>
 
 <script>
 const canvas=document.getElementById('c'),ctx=canvas.getContext('2d');
-const overlay=document.getElementById('overlay'),scEl=document.getElementById('sc'),lvEl=document.getElementById('lv');
-const banner=document.getElementById('mode-banner');
-const T=24,COLS=19,ROWS=21;
+const overlay=document.getElementById('overlay'),scEl=document.getElementById('sc'),lvEl=document.getElementById('lv'),banner=document.getElementById('banner'),wrap=document.getElementById('wrap');
 
-const RAW=[
-  "XXXXXXXXXXXXXXXXXXX",
-  "X........X........X",
-  "X.XX.XXX.X.XXX.XX.X",
-  "XoXX.XXX.X.XXX.XXoX",
-  "X.XX.XXX.X.XXX.XX.X",
-  "X.................X",
-  "X.XX.X.XXXXX.X.XX.X",
-  "X....X..XXX..X....X",
-  "XXXX.XXXXXXXXX.XXXX",
-  "XXXX.X       X.XXXX",
-  "XXXX.X XXXXX X.XXXX",
-  "XXXX.         .XXXX",
-  "XXXX.X XXXXX X.XXXX",
-  "XXXX.XXXXXXXXX.XXXX",
-  "X........X........X",
-  "X.XX.XXX.X.XXX.XX.X",
-  "Xo.......P.......oX",
-  "XXX.X.XXXXX.X.X.XXX",
-  "X....X.......X....X",
-  "X.XXXXXXX.XXXXXXX.X",
-  "X.................X",
+const COLS=21,ROWS=23;
+let T=20,score=0,lives=3,tick=0,state='idle',raf=null;
+let map=[],dots=[],powerDots=[],player={},ghosts=[];
+let frightTimer=0,frightActive=false,ghostEatCombo=0;
+let deathAnim=null; // {frame,maxFrame,x,y}
+let floatScores=[]; // {x,y,val,timer}
+
+// Mappa A — con tunnel sui lati (riga 10 = tunnel)
+const MAP_A=[
+  "XXXXXXXXXXXXXXXXXXXXX",
+  "X........X........X X",
+  "X.XX.XXX.X.XXX.XX.X X",
+  "Xo.................oX",
+  "X.XX.X.XXXXX.X.XX.X X",
+  "X....X...X...X....X X",
+  "XXXX.XXX.X.XXX.XXXXXX",
+  "   X.X       X.X     ",
+  "XXXX.X XX XX X.XXXXXX",
+  "T    .  GGGGG .     T",
+  "XXXX.X XXXXX X.XXXXXX",
+  "   X.X       X.X     ",
+  "XXXX.XXX.X.XXX.XXXXXX",
+  "X....X...X...X....X X",
+  "X.XX.X.XXXXX.X.XX.X X",
+  "Xo.................oX",
+  "X.XX.XXX.X.XXX.XX.X X",
+  "X....X...........X X X",
+  "X.XX.X.XXXXX.X.XX.X X",
+  "X.......P.........X X",
+  "X.XXXXXXXXXXXXXXXXX X",
+  "X.................X X",
+  "XXXXXXXXXXXXXXXXXXXXX",
 ];
 
-// Posizioni di spawn per i fantasmi — distribuiti per tutto il labirinto
-const GHOST_SPAWNS=[
-  {x:1,y:1},{x:17,y:1},{x:1,y:19},{x:17,y:19}
+// Mappa B — labirinto diverso con tunnel
+const MAP_B=[
+  "XXXXXXXXXXXXXXXXXXXXX",
+  "X...................X",
+  "X.XXXXX.XXX.XXXXX..X",
+  "Xo....X.X.X.X....o.X",
+  "XXXXX.X.X.X.X.XXXXX X",
+  "X.....X.....X.......X",
+  "X.XXX.XXXXXXX.XXX...X",
+  "X.X.............X...X",
+  "X.X.XXXXXXXXXXX.X...X",
+  "T   X  GGGGG  X    T",
+  "X.X.XXXXXXXXXXX.X...X",
+  "X.X.............X...X",
+  "X.XXX.XXXXXXX.XXX...X",
+  "X.....X.....X.......X",
+  "XXXXX.X.X.X.X.XXXXX X",
+  "Xo....X.X.X.X....o.X",
+  "X.XXXXX.XXX.XXXXX..X",
+  "X...................X",
+  "X.XX.X.XXXXX.X.XX...X",
+  "X.......P.........X X",
+  "X.XXXXXXXXXXXXXXXXX X",
+  "X.................X X",
+  "XXXXXXXXXXXXXXXXXXXXX",
 ];
 
-let map=[],dots=[],powerDots=[],score=0,lives=3;
-let player={},ghosts=[],tick=0,state='idle',raf=null;
-// Modalità: 'danger' = devo scappare, 'eat' = posso mangiare
-let modeTimer=0,MODE_DURATION=300,currentMode='danger',modeFlash=0;
+const MAPS=[MAP_A,MAP_B];
+const TUNNEL_ROW=9;
+const GSPAWNS=[{x:1,y:2},{x:19,y:2},{x:1,y:20},{x:19,y:20}];
+const GCOLS=['#FF6B9D','#FFB347','#87CEEB','#98FB98'];
 
-function build(){
-  map=[];dots=[];powerDots=[];
-  let ps={x:9,y:16};
-  for(let r=0;r<ROWS;r++){
-    map[r]=[];
-    const row=RAW[r]||'';
-    for(let c=0;c<COLS;c++){
-      const ch=row[c]||' ';
-      map[r][c]=(ch==='X')?1:0;
-      if(ch==='P') ps={x:c,y:r};
-      if(ch==='.') dots.push({x:c,y:r,eaten:false});
-      if(ch==='o'){dots.push({x:c,y:r,eaten:false});powerDots.push({x:c,y:r});}
-    }
-  }
-  player={x:ps.x,y:ps.y,px:ps.x,py:ps.y,dx:0,dy:0,ndx:0,ndy:0,mt:0,spd:14};
-
-  const gc=['#FF6B9D','#FFB347','#87CEEB','#98FB98'];
-  ghosts=GHOST_SPAWNS.map((s,i)=>({
-    x:s.x,y:s.y,px:s.x,py:s.y,dx:0,dy:0,
-    color:gc[i],dead:false,mt:0,spd:18,
-    dirTimer:0,dirInterval:40+i*10
-  }));
-
-  currentMode='danger';modeTimer=MODE_DURATION;
-  updateBanner();
+function resize(){
+  const W=wrap.clientWidth||300,H=wrap.clientHeight||300;
+  T=Math.max(13,Math.floor(Math.min(W/COLS,H/ROWS)));
+  canvas.width=T*COLS;canvas.height=T*ROWS;
 }
 
 function wall(c,r){
-  if(r<0||r>=ROWS||c<0||c>=COLS) return true;
+  if(r<0||r>=ROWS)return true;
+  // tunnel: colonne 0 e COLS-1 sulla tunnel row sono passabili
+  if(r===TUNNEL_ROW&&(c<0||c>=COLS))return false;
+  if(c<0||c>=COLS)return true;
   return map[r]&&map[r][c]===1;
 }
 
-function stepPlayer(){
-  player.mt++;
-  if(player.mt<player.spd) return;
-  player.mt=0;
-  if(player.ndx!==0||player.ndy!==0){
-    const nx=player.x+player.ndx,ny=player.y+player.ndy;
-    if(!wall(nx,ny)){player.dx=player.ndx;player.dy=player.ndy;}
-  }
-  if(player.dx===0&&player.dy===0) return;
-  const mx=(player.x+player.dx+COLS)%COLS,my=(player.y+player.dy+ROWS)%ROWS;
-  if(!wall(mx,my)){player.px=player.x;player.py=player.y;player.x=mx;player.y=my;}
-  dots.forEach(d=>{
-    if(!d.eaten&&d.x===player.x&&d.y===player.y){
-      d.eaten=true;score+=10;
+function build(){
+  const chosen=MAPS[Math.floor(Math.random()*MAPS.length)];
+  map=[];dots=[];powerDots=[];
+  let ps={x:10,y:19};
+  for(let r=0;r<ROWS;r++){
+    map[r]=[];
+    const row=chosen[r]||'';
+    for(let c=0;c<COLS;c++){
+      const ch=row[c]||' ';
+      map[r][c]=ch==='X'?1:0;
+      if(ch==='P')ps={x:c,y:r};
+      if(ch==='.')dots.push({x:c,y:r,eaten:false});
+      if(ch==='o'){dots.push({x:c,y:r,eaten:false});powerDots.push({x:c,y:r});}
     }
+  }
+  player={x:ps.x,y:ps.y,px:ps.x,py:ps.y,dx:0,dy:0,ndx:0,ndy:0,mt:0,spd:18,buffDx:0,buffDy:0,buffTimer:0,alive:true};
+  ghosts=GSPAWNS.map((s,i)=>{
+    let sx=s.x,sy=s.y;
+    for(let dr=-2;dr<=2&&wall(sx,sy);dr++)for(let dc=-2;dc<=2&&wall(sx,sy);dc++){sx=s.x+dc;sy=s.y+dr;}
+    return{x:sx,y:sy,px:sx,py:sy,dx:0,dy:0,color:GCOLS[i],dead:false,mt:0,spd:24,dt:0,di:50+i*14,fright:false};
   });
+  frightTimer=0;frightActive=false;ghostEatCombo=0;
+  deathAnim=null;floatScores=[];
+  updateBanner();
 }
 
-function getOpenDirs(g){
-  return [{dx:1,dy:0},{dx:-1,dy:0},{dx:0,dy:1},{dx:0,dy:-1}]
+function openDirs(g){
+  return[{dx:1,dy:0},{dx:-1,dy:0},{dx:0,dy:1},{dx:0,dy:-1}]
     .filter(d=>!(d.dx===-g.dx&&d.dy===-g.dy)&&!wall(g.x+d.dx,g.y+d.dy));
 }
 
-function stepGhost(g){
-  if(g.dead) return;
-  g.mt++;
-  if(g.mt<g.spd) return;
-  g.mt=0;
+function wrapX(x){return((x%COLS)+COLS)%COLS;}
 
-  g.dirTimer++;
-  // Cambio direzione: in modalità pericolo inseguono, in eat fuggono o random
-  if(g.dirTimer>=g.dirInterval){
-    g.dirTimer=0;
-    const dirs=getOpenDirs(g);
-    if(dirs.length===0) return;
-    let chosen;
-    if(currentMode==='danger'){
-      // insegue il giocatore
-      chosen=dirs.reduce((best,d)=>{
-        const dist=Math.hypot((g.x+d.dx)-player.x,(g.y+d.dy)-player.y);
-        return dist<best.dist?{d,dist}:best;
-      },{d:dirs[0],dist:Infinity}).d;
-    } else {
-      // fugge dal giocatore
-      chosen=dirs.reduce((best,d)=>{
-        const dist=Math.hypot((g.x+d.dx)-player.x,(g.y+d.dy)-player.y);
-        return dist>best.dist?{d,dist}:best;
-      },{d:dirs[0],dist:-1}).d;
-    }
-    g.dx=chosen.dx;g.dy=chosen.dy;
+function stepPlayer(){
+  if(!player.alive)return;
+  player.mt++;
+  if(player.ndx!==0||player.ndy!==0){player.buffDx=player.ndx;player.buffDy=player.ndy;player.buffTimer=14;}
+  if(player.buffTimer>0)player.buffTimer--;else{player.buffDx=0;player.buffDy=0;}
+  if(player.mt<player.spd)return;
+  player.mt=0;
+  if(player.buffDx!==0||player.buffDy!==0){
+    const nx=player.x+player.buffDx,ny=player.y+player.buffDy;
+    if(!wall(nx,ny)){player.dx=player.buffDx;player.dy=player.buffDy;player.buffDx=0;player.buffDy=0;player.buffTimer=0;}
   }
-
-  if(g.dx===0&&g.dy===0){
-    const dirs=getOpenDirs(g);
-    if(dirs.length>0){const d=dirs[Math.floor(Math.random()*dirs.length)];g.dx=d.dx;g.dy=d.dy;}
-    return;
-  }
-  const nx=g.x+g.dx,ny=g.y+g.dy;
-  if(!wall(nx,ny)){g.px=g.x;g.py=g.y;g.x=nx;g.y=ny;}
-  else{
-    const dirs=getOpenDirs(g);
-    if(dirs.length>0){const d=dirs[Math.floor(Math.random()*dirs.length)];g.dx=d.dx;g.dy=d.dy;}
-  }
-}
-
-function checkHits(){
-  ghosts.forEach(g=>{
-    if(g.dead) return;
-    if(Math.abs(g.x-player.x)<1&&Math.abs(g.y-player.y)<1){
-      if(currentMode==='eat'){
-        g.dead=true;score+=200;
-        setTimeout(()=>{g.dead=false;const s=GHOST_SPAWNS[ghosts.indexOf(g)];g.x=s.x;g.y=s.y;g.px=s.x;g.py=s.y;g.dx=0;g.dy=0;},4000);
-      } else {
-        lives--;updateLv();
-        if(lives<=0) endGame();
-        else resetPos();
+  if(!player.dx&&!player.dy)return;
+  let nx=player.x+player.dx,ny=player.y+player.dy;
+  // tunnel wrap
+  if(player.y===TUNNEL_ROW){nx=wrapX(nx);}
+  if(!wall(nx,ny)){player.px=player.x;player.py=player.y;player.x=nx;player.y=ny;}
+  // raccogli
+  dots.forEach(d=>{
+    if(!d.eaten&&d.x===player.x&&d.y===player.y){
+      d.eaten=true;score+=10;
+      if(powerDots.some(p=>p.x===d.x&&p.y===d.y)){
+        frightActive=true;frightTimer=300;ghostEatCombo=0;
+        ghosts.forEach(g=>{if(!g.dead)g.fright=true;});
+        updateBanner(true);
       }
     }
   });
 }
 
-function resetPos(){
-  player.x=9;player.y=16;player.px=9;player.py=16;player.dx=0;player.dy=0;player.ndx=0;player.ndy=0;
+function stepGhost(g){
+  if(g.dead)return;
+  g.mt++;if(g.mt<(g.fright?g.spd+8:g.spd))return;g.mt=0;
+  g.dt++;
+  if(g.dt>=g.di){
+    g.dt=0;
+    const dirs=openDirs(g);if(!dirs.length)return;
+    const ch=g.fright
+      ?dirs[Math.floor(Math.random()*dirs.length)]
+      :dirs.reduce((b,d)=>{const dist=Math.hypot(g.x+d.dx-player.x,g.y+d.dy-player.y);return dist<b.dist?{d,dist}:b;},{d:dirs[0],dist:Infinity}).d;
+    g.dx=ch.dx;g.dy=ch.dy;
+  }
+  if(!g.dx&&!g.dy){const dirs=openDirs(g);if(dirs.length){g.dx=dirs[0].dx;g.dy=dirs[0].dy;}return;}
+  let nx=g.x+g.dx,ny=g.y+g.dy;
+  if(g.y===TUNNEL_ROW)nx=wrapX(nx);
+  if(!wall(nx,ny)){g.px=g.x;g.py=g.y;g.x=nx;g.y=ny;}
+  else{const dirs=openDirs(g);if(dirs.length){g.dx=dirs[0].dx;g.dy=dirs[0].dy;}}
 }
 
-function updateLv(){lvEl.textContent='🦝'.repeat(Math.max(0,lives));}
+function checkHits(){
+  if(!player.alive)return;
+  ghosts.forEach((g,idx)=>{
+    if(g.dead)return;
+    if(Math.abs(g.x-player.x)<1&&Math.abs(g.y-player.y)<1){
+      if(g.fright){
+        g.dead=true;g.fright=false;
+        ghostEatCombo++;
+        const pts=[200,400,800,1600][Math.min(ghostEatCombo-1,3)];
+        score+=pts;
+        floatScores.push({x:g.x*T+T/2,y:g.y*T,val:pts,timer:60});
+        setTimeout(()=>{
+          g.dead=false;
+          let sx=GSPAWNS[idx].x,sy=GSPAWNS[idx].y;
+          for(let dr=-2;dr<=2;dr++)for(let dc=-2;dc<=2;dc++){if(!wall(sx+dc,sy+dr)){sx+=dc;sy+=dr;break;}}
+          g.x=sx;g.y=sy;g.px=sx;g.py=sy;g.dx=0;g.dy=0;
+        },3500);
+      } else {
+        triggerDeath();
+      }
+    }
+  });
+}
 
-function updateBanner(){
-  if(currentMode==='danger'){
-    banner.style.background='rgba(180,30,30,0.7)';
-    banner.style.color='#ffcccc';
-    banner.textContent='🔴 PERICOLO — scappa dalle sigarette!';
-  } else {
-    banner.style.background='rgba(30,80,200,0.7)';
-    banner.style.color='#cce0ff';
-    banner.textContent='🔵 MANGIA — le sigarette sono vulnerabili!';
+function triggerDeath(){
+  if(!player.alive)return;
+  player.alive=false;
+  state='dying';
+  deathAnim={frame:0,maxFrame:50,x:player.x,y:player.y};
+}
+
+function stepDeath(){
+  if(!deathAnim)return;
+  deathAnim.frame++;
+  if(deathAnim.frame>=deathAnim.maxFrame){
+    deathAnim=null;
+    lives--;
+    lvEl.textContent='🦝'.repeat(Math.max(0,lives));
+    if(lives<=0){endGame();return;}
+    // Respawn
+    player.x=10;player.y=19;player.px=10;player.py=19;
+    player.dx=0;player.dy=0;player.ndx=0;player.ndy=0;player.buffDx=0;player.buffDy=0;player.alive=true;
+    ghosts.forEach(g=>{g.fright=false;});
+    frightActive=false;frightTimer=0;
+    updateBanner();
+    state='playing';
   }
 }
 
-function stepMode(){
-  modeTimer--;
-  modeFlash=modeTimer<60?Math.floor(tick/8)%2:0;
-  if(modeTimer<=0){
-    currentMode=currentMode==='danger'?'eat':'danger';
-    modeTimer=MODE_DURATION;
+function stepFright(){
+  if(!frightActive)return;
+  frightTimer--;
+  if(frightTimer<=0){
+    frightActive=false;
+    ghosts.forEach(g=>{g.fright=false;});
+    ghostEatCombo=0;
     updateBanner();
+  }
+}
+
+function updateBanner(power){
+  if(power||frightActive){
+    banner.style.background='rgba(20,60,180,0.85)';banner.style.color='#cce0ff';
+    banner.textContent='⚡ POWER-UP! Mangia le sigarette!';
+  } else {
+    banner.style.background='rgba(40,40,40,0.85)';banner.style.color='#aaa';
+    banner.textContent='🟢 Raccogli cicche · 🌟 Power-up per mangiare i fantasmi';
   }
 }
 
 function lerp(a,b,t){return a+(b-a)*t;}
 
-function drawRaccoon(cx,cy,dx,dy,t){
-  const ang=(dx===0&&dy===0)?0:Math.atan2(dy,dx);
-  const mo=Math.abs(Math.sin(t*0.2))*0.45;
-  ctx.save();ctx.translate(cx,cy);ctx.rotate(ang);
-  ctx.beginPath();ctx.arc(0,0,9,mo,Math.PI*2-mo);ctx.lineTo(0,0);
-  ctx.fillStyle='#8B7355';ctx.fill();
+function drawRaccoon(cx,cy,dx,dy,t,alpha){
+  ctx.globalAlpha=alpha||1;
+  const s=T/24,ang=(dx||dy)?Math.atan2(dy,dx):0,mo=Math.abs(Math.sin(t*0.18))*0.45;
+  ctx.save();ctx.translate(cx,cy);ctx.rotate(ang);ctx.scale(s,s);
+  ctx.beginPath();ctx.arc(0,0,9,mo,Math.PI*2-mo);ctx.lineTo(0,0);ctx.fillStyle='#8B7355';ctx.fill();
   ctx.fillStyle='#6B5335';
   ctx.beginPath();ctx.arc(-2,-5,3,0,Math.PI*2);ctx.fill();
   ctx.beginPath();ctx.arc(6,-5,3,0,Math.PI*2);ctx.fill();
-  ctx.fillStyle='#C4A882';
-  ctx.beginPath();ctx.arc(0,0,5,Math.PI,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#C4A882';ctx.beginPath();ctx.arc(0,0,5,Math.PI,Math.PI*2);ctx.fill();
   ctx.fillStyle='#222';
   ctx.beginPath();ctx.arc(-3,-1,1.5,0,Math.PI*2);ctx.fill();
   ctx.beginPath();ctx.arc(3,-1,1.5,0,Math.PI*2);ctx.fill();
   ctx.strokeStyle='#555';ctx.lineWidth=1;
-  ctx.beginPath();
-  ctx.moveTo(-4,2);ctx.lineTo(-8,0);ctx.moveTo(-4,2);ctx.lineTo(-8,4);
-  ctx.moveTo(4,2);ctx.lineTo(8,0);ctx.moveTo(4,2);ctx.lineTo(8,4);
-  ctx.stroke();
+  ctx.beginPath();ctx.moveTo(-4,2);ctx.lineTo(-8,0);ctx.moveTo(-4,2);ctx.lineTo(-8,4);ctx.moveTo(4,2);ctx.lineTo(8,0);ctx.moveTo(4,2);ctx.lineTo(8,4);ctx.stroke();
   ctx.restore();
+  ctx.globalAlpha=1;
 }
 
-function drawGhost(cx,cy,col,isEat,flash,dead,t){
-  if(dead) return;
-  ctx.save();ctx.translate(cx,cy);
-  const bodyCol=isEat?(flash?'#ffffff':'#4488ff'):col;
-  // corpo sigaretta
-  ctx.fillStyle='#f0f0f0';ctx.fillRect(-5,-11,10,18);
+function drawDeathAnim(){
+  if(!deathAnim)return;
+  const prog=deathAnim.frame/deathAnim.maxFrame; // 0→1
+  const cx=deathAnim.x*T+T/2,cy=deathAnim.y*T+T/2;
+  const s=T/24*(1-prog*0.5); // rimpicciolisce
+  const alpha=1-prog;        // sfuma
+  const spin=prog*Math.PI*3; // ruota su se stesso
+  ctx.globalAlpha=alpha;
+  ctx.save();ctx.translate(cx,cy);ctx.rotate(spin);ctx.scale(s,s);
+  // corpo che svanisce
+  ctx.beginPath();ctx.arc(0,0,9,0,Math.PI*2);ctx.fillStyle='#8B7355';ctx.fill();
+  ctx.fillStyle='#6B5335';
+  ctx.beginPath();ctx.arc(-2,-5,3,0,Math.PI*2);ctx.fill();
+  ctx.beginPath();ctx.arc(6,-5,3,0,Math.PI*2);ctx.fill();
+  ctx.restore();
+  ctx.globalAlpha=1;
+}
+
+function drawGhost(cx,cy,col,fright,dead){
+  if(dead)return;
+  const flash=fright&&frightTimer<80&&Math.floor(tick/8)%2===0;
+  const s=T/24,bc=fright?(flash?'#fff':'#4488ff'):col;
+  ctx.save();ctx.translate(cx,cy);ctx.scale(s,s);
+  ctx.fillStyle='#eee';ctx.fillRect(-5,-11,10,18);
   ctx.fillStyle='#F5DEB3';ctx.fillRect(-5,-11,10,9);
-  ctx.fillStyle=isEat?'#4488ff':'#FF8C00';ctx.fillRect(-5,-15,10,6);
-  if(!isEat){
-    ctx.fillStyle='#ff3300';
-    ctx.beginPath();ctx.arc(0,-17,3,0,Math.PI*2);ctx.fill();
-    ctx.fillStyle='rgba(200,200,200,0.4)';
-    ctx.beginPath();ctx.arc(-2,-20,2,0,Math.PI*2);ctx.fill();
-  }
-  // gambe fantasma
-  ctx.fillStyle=bodyCol;
+  ctx.fillStyle=fright?'#4488ff':'#FF8C00';ctx.fillRect(-5,-15,10,6);
+  if(!fright){ctx.fillStyle='#ff3300';ctx.beginPath();ctx.arc(0,-17,3,0,Math.PI*2);ctx.fill();}
+  ctx.fillStyle=bc;
   for(let i=0;i<4;i++){ctx.beginPath();ctx.arc(-5+i*3.5,8,2.2,0,Math.PI*2);ctx.fill();}
-  // occhi
-  ctx.fillStyle=isEat?'#88aaff':'#111';
+  ctx.fillStyle=fright?'#88aaff':'#111';
   ctx.beginPath();ctx.arc(-2,1,1.8,0,Math.PI*2);ctx.fill();
   ctx.beginPath();ctx.arc(3,1,1.8,0,Math.PI*2);ctx.fill();
-  if(isEat){
-    ctx.strokeStyle='#88aaff';ctx.lineWidth=1.2;
-    ctx.beginPath();ctx.moveTo(-4,5);ctx.lineTo(-2,3);ctx.lineTo(0,5);ctx.lineTo(2,3);ctx.lineTo(4,5);ctx.stroke();
-  } else {
-    ctx.strokeStyle='#333';ctx.lineWidth=1;
-    ctx.beginPath();ctx.moveTo(-3,4);ctx.quadraticCurveTo(0,6,3,4);ctx.stroke();
-  }
   ctx.restore();
 }
 
 function render(){
   ctx.fillStyle='#0d1117';ctx.fillRect(0,0,canvas.width,canvas.height);
-  for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++){
+
+  // Tunnel hint
+  ctx.fillStyle='rgba(255,255,100,0.08)';
+  ctx.fillRect(0,TUNNEL_ROW*T,T,T);
+  ctx.fillRect((COLS-1)*T,TUNNEL_ROW*T,T,T);
+
+  // Muri
+  for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){
     if(map[r][c]===1){
       ctx.fillStyle='#162a40';ctx.fillRect(c*T,r*T,T,T);
       ctx.strokeStyle='#1e4060';ctx.lineWidth=0.5;ctx.strokeRect(c*T+0.5,r*T+0.5,T-1,T-1);
     }
   }
-  const isPow=(x,y)=>powerDots.some(p=>p.x===x&&p.y===y);
+
+  // Cicche
   dots.forEach(d=>{
-    if(d.eaten) return;
-    const cx=d.x*T+T/2,cy=d.y*T+T/2;
-    if(isPow(d.x,d.y)){
-      ctx.fillStyle=`rgba(255,215,0,${0.6+0.4*Math.sin(tick*0.15)})`;
-      ctx.beginPath();ctx.arc(cx,cy,5,0,Math.PI*2);ctx.fill();
+    if(d.eaten)return;
+    const cx=d.x*T+T/2,cy=d.y*T+T/2,isPow=powerDots.some(p=>p.x===d.x&&p.y===d.y);
+    if(isPow){
+      const pulse=0.65+0.35*Math.sin(tick*0.18);
+      ctx.fillStyle=`rgba(255,215,0,${pulse})`;
+      ctx.beginPath();ctx.arc(cx,cy,T*0.28,0,Math.PI*2);ctx.fill();
+      // stellina
+      ctx.fillStyle='rgba(255,255,255,0.9)';
+      ctx.font=`${Math.floor(T*0.4)}px Arial`;ctx.textAlign='center';ctx.textBaseline='middle';
+      ctx.fillText('★',cx,cy);
     } else {
-      ctx.fillStyle='rgba(120,220,120,0.85)';
-      ctx.beginPath();ctx.arc(cx,cy,2.5,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='rgba(100,220,100,0.9)';
+      ctx.beginPath();ctx.arc(cx,cy,T*0.13,0,Math.PI*2);ctx.fill();
     }
   });
-  const prog=(mt,spd)=>Math.min(1,mt/Math.max(spd,1));
-  const isEat=currentMode==='eat';
+
+  // Fantasmi
   ghosts.forEach(g=>{
-    const p=prog(g.mt,g.spd);
-    const cx=lerp(g.px,g.x,p)*T+T/2,cy=lerp(g.py,g.y,p)*T+T/2;
-    drawGhost(cx,cy,g.color,isEat,modeFlash===1,g.dead,tick);
+    const p=Math.min(1,g.mt/Math.max(g.fright?g.spd+8:g.spd,1));
+    drawGhost(lerp(g.px,g.x,p)*T+T/2,lerp(g.py,g.y,p)*T+T/2,g.color,g.fright,g.dead);
   });
-  const pp=prog(player.mt,player.spd);
-  const pcx=lerp(player.px,player.x,pp)*T+T/2,pcy=lerp(player.py,player.y,pp)*T+T/2;
-  drawRaccoon(pcx,pcy,player.dx,player.dy,tick);
+
+  // Procione o animazione morte
+  if(deathAnim){
+    drawDeathAnim();
+  } else if(player.alive){
+    const pp=Math.min(1,player.mt/Math.max(player.spd,1));
+    drawRaccoon(lerp(player.px,player.x,pp)*T+T/2,lerp(player.py,player.y,pp)*T+T/2,player.dx,player.dy,tick,1);
+  }
+
+  // Punteggi galleggianti
+  floatScores=floatScores.filter(f=>f.timer>0);
+  floatScores.forEach(f=>{
+    f.timer--;f.y-=0.4;
+    ctx.globalAlpha=f.timer/60;
+    ctx.fillStyle='#FFD700';ctx.font='bold 13px Arial';ctx.textAlign='center';
+    ctx.fillText('+'+f.val,f.x,f.y);
+    ctx.globalAlpha=1;
+  });
+
   scEl.textContent=score;
 }
 
 function loop(){
-  if(state!=='playing') return;
+  if(state==='dying'){stepDeath();render();raf=requestAnimationFrame(loop);return;}
+  if(state!=='playing')return;
   tick++;
-  stepMode();
-  stepPlayer();
-  ghosts.forEach(stepGhost);
-  checkHits();
-  if(dots.filter(d=>!d.eaten).length===0){showEnd(true);return;}
-  render();
-  raf=requestAnimationFrame(loop);
+  stepFright();stepPlayer();ghosts.forEach(stepGhost);checkHits();
+  if(!dots.some(d=>!d.eaten)){showEnd(true);return;}
+  render();raf=requestAnimationFrame(loop);
 }
 
 function startGame(){
   cancelAnimationFrame(raf);
-  score=0;lives=3;tick=0;
-  build();updateLv();
-  state='playing';
-  overlay.style.display='none';
+  score=0;lives=3;tick=0;deathAnim=null;floatScores=[];
+  lvEl.textContent='🦝🦝🦝';
+  resize();build();
+  state='playing';overlay.style.display='none';
   loop();
 }
 function endGame(){state='over';cancelAnimationFrame(raf);showEnd(false);}
 
 function showEnd(win){
-  state='end';
-  overlay.style.display='flex';
+  state='end';overlay.style.display='flex';
   overlay.innerHTML=`
     <h1>${win?'🎉 BRAVO!':'💨 Game Over'}</h1>
-    <p class="sub">${win?'Hai raccolto tutte le cicche!':'Troppi mozziconi!'}<br>Punteggio: <strong style="color:#FFD700">${score}</strong></p>
-    <p class="sub" style="margin-bottom:10px">Lascia i dati e ritira il premio allo stand!</p>
-    <div class="fg"><label>Nome e Cognome *</label><input id="fn" type="text" placeholder="Mario Rossi"></div>
-    <div class="fg"><label>Email *</label><input id="fe" type="email" placeholder="mario@email.com"></div>
-    <div class="fg"><label>Telefono</label><input id="fp" type="tel" placeholder="+39 000 0000000"></div>
-    <div style="margin-top:12px">
-      <button class="btn" id="subBtn">🎁 RITIRA IL PREMIO</button>
-      <button class="btn blue" id="reBtn">🔄 Riprova</button>
+    <p class="sub">${win?'Hai raccolto tutte le cicche!':'Troppi mozziconi!'}<br>Punteggio: <b style="color:#FFD700">${score}</b><br><br>Lascia i dati e ritira il tuo premio!</p>
+    <div class="fg"><label>Nome e Cognome *</label><input id="fn" type="text" placeholder="Mario Rossi" autocomplete="name"></div>
+    <div class="fg"><label>Email *</label><input id="fe" type="email" placeholder="mario@email.com" autocomplete="email"></div>
+    <div class="fg"><label>Telefono</label><input id="fp" type="tel" placeholder="+39 000 0000000" autocomplete="tel"></div>
+    <div style="margin-top:10px">
+      <button class="btn" id="subBtn">🎁 RITIRA PREMIO</button>
+      <button class="btn blue" id="reBtn" style="margin-top:4px">🔄 Riprova</button>
     </div>`;
   document.getElementById('subBtn').addEventListener('click',submitForm);
   document.getElementById('reBtn').addEventListener('click',startGame);
 }
 
 function submitForm(){
-  const name=document.getElementById('fn').value.trim();
-  const email=document.getElementById('fe').value.trim();
+  const name=document.getElementById('fn').value.trim(),email=document.getElementById('fe').value.trim();
   if(!name||!email){alert('Inserisci nome e email!');return;}
   overlay.innerHTML=`
-    <h1>🦝 Perfetto, ${name.split(' ')[0]}!</h1>
-    <p class="sub">Dati registrati!<br>Mostra questo schermo allo staff Re-Cig.</p>
-    <div style="background:rgba(255,215,0,0.12);border:2px solid #FFD700;border-radius:12px;padding:16px;margin:12px 0;width:100%;max-width:280px">
-      <p style="color:#FFD700;font-size:18px;font-weight:bold">🎁 PREMIO RISERVATO</p>
-      <p style="color:#fff;font-size:14px;margin-top:6px"><strong>${name}</strong></p>
-      <p style="color:#aaa;font-size:12px">${score} punti · Ecomondo Rimini</p>
+    <h1>🦝 Perfetto!</h1>
+    <p class="sub">Mostra questo schermo allo staff Re-Cig.</p>
+    <div style="background:rgba(255,215,0,0.12);border:2px solid #FFD700;border-radius:10px;padding:14px;margin:10px 0;width:100%;max-width:260px">
+      <p style="color:#FFD700;font-size:16px;font-weight:bold">🎁 PREMIO RISERVATO</p>
+      <p style="color:#fff;font-size:13px;margin-top:5px"><b>${name}</b></p>
+      <p style="color:#aaa;font-size:11px">${score} punti · Ecomondo Rimini</p>
     </div>
-    <p style="color:#88ee88;font-size:12px;margin-bottom:14px">♻️ Ogni cicca raccolta è un passo verso un ambiente più pulito!</p>
+    <p style="color:#88ee88;font-size:11px;margin-bottom:12px">♻️ Insieme per un ambiente più pulito!</p>
     <button class="btn blue" id="reBtn2">🔄 Gioca ancora</button>`;
   document.getElementById('reBtn2').addEventListener('click',startGame);
 }
 
+// Input tastiera
 document.addEventListener('keydown',e=>{
   const m={ArrowUp:{dx:0,dy:-1},ArrowDown:{dx:0,dy:1},ArrowLeft:{dx:-1,dy:0},ArrowRight:{dx:1,dy:0}};
   if(m[e.key]){player.ndx=m[e.key].dx;player.ndy=m[e.key].dy;e.preventDefault();}
 });
+
+// Swipe
 let tx=0,ty=0;
-canvas.addEventListener('touchstart',e=>{tx=e.touches[0].clientX;ty=e.touches[0].clientY;e.preventDefault();},{passive:false});
-canvas.addEventListener('touchend',e=>{
+document.addEventListener('touchstart',e=>{tx=e.touches[0].clientX;ty=e.touches[0].clientY;},{passive:true});
+document.addEventListener('touchend',e=>{
+  if(state!=='playing')return;
   const dx=e.changedTouches[0].clientX-tx,dy=e.changedTouches[0].clientY-ty;
+  if(Math.abs(dx)<15&&Math.abs(dy)<15)return;
   if(Math.abs(dx)>Math.abs(dy)){player.ndx=dx>0?1:-1;player.ndy=0;}
   else{player.ndy=dy>0?1:-1;player.ndx=0;}
-  e.preventDefault();
-},{passive:false});
+},{passive:true});
+
+// D-pad
+const DMAP={dU:{ndx:0,ndy:-1},dD:{ndx:0,ndy:1},dL:{ndx:-1,ndy:0},dR:{ndx:1,ndy:0}};
+['dU','dD','dL','dR'].forEach(id=>{
+  const el=document.getElementById(id);
+  el.addEventListener('touchstart',e=>{e.stopPropagation();e.preventDefault();player.ndx=DMAP[id].ndx;player.ndy=DMAP[id].ndy;},{passive:false});
+  el.addEventListener('click',()=>{player.ndx=DMAP[id].ndx;player.ndy=DMAP[id].ndy;});
+});
 
 document.getElementById('startBtn').addEventListener('click',startGame);
+window.addEventListener('resize',resize);
 </script>
 </body>
 </html>
